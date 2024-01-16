@@ -6,15 +6,15 @@ public class Main {
     public static void main(String[] args) {
         System.out.println("Welcome to the row reducer.");
 
-//        int[] rowColumn = getRowsAndColumns();
-//        RowReduction rr = new RowReduction(rowColumn[0], rowColumn[1]);
-//        rr.populateMatrix(in);
-        RowReduction rr = new RowReduction(3, 4);
-        rr.matrix = new double[][] { //test matrix
-                new double[]{1, 2, 3, 6},
-                new double[]{2, -3, 2, 14},
-                new double[]{3, 1, -1, -2}
-        };
+        int[] rowColumn = getRowsAndColumns();
+        RowReduction rr = new RowReduction(rowColumn[0], rowColumn[1]);
+        rr.populateMatrix(in);
+//        RowReduction rr = new RowReduction(3, 4);
+//        rr.matrix = new double[][] { //test matrix
+//                new double[]{1, 2, 3, 6},
+//                new double[]{2, -3, 2, 14},
+//                new double[]{3, 1, -1, -2}
+//        };
         rr.printMatrix();
 
         System.out.println("Performing forward phase of algorithm...");
@@ -40,7 +40,7 @@ public class Main {
 
 class RowReduction {
     private final int rows, cols;
-    private List<int[]> pivots = new ArrayList<>();
+    private final List<int[]> pivots = new ArrayList<>();
     double[][] matrix;
 
     public RowReduction(int rows, int cols) {
