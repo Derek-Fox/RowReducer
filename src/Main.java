@@ -6,15 +6,15 @@ public class Main {
     public static void main(String[] args) {
         System.out.println("Welcome to the row reducer.");
 
-        int[] rowColumn = getRowsAndColumns();
-        RowReduction rr = new RowReduction(rowColumn[0], rowColumn[1]);
-        rr.populateMatrix(in);
-//        RowReduction rr = new RowReduction(3, 4);
-//        rr.matrix = new double[][] { //test matrix
-//                new double[]{1, 2, 3, 6},
-//                new double[]{2, -3, 2, 14},
-//                new double[]{3, 1, -1, -2}
-//        };
+//        int[] rowColumn = getRowsAndColumns();
+//        RowReduction rr = new RowReduction(rowColumn[0], rowColumn[1]);
+//        rr.populateMatrix(in);
+
+        RowReduction rr = new RowReduction(2, 4);
+        rr.matrix = new double[][]{
+                {1, 0, -8, -3},
+                {0, 1, -1, -1}
+        };
         rr.printMatrix();
 
         System.out.println("Performing forward phase of algorithm...");
@@ -51,6 +51,7 @@ class RowReduction {
 
     /**
      * Populates matrix from stdin.
+     *
      * @param in scanner to use
      */
     public void populateMatrix(Scanner in) {
@@ -80,11 +81,12 @@ class RowReduction {
 
     /**
      * Checks if a system in echelon form is inconsistent. To be called after forward().
+     *
      * @return true if system is inconsistent
      */
     public boolean checkInconsistent() {
         for (int[] pivot : pivots) {
-            if (pivot[1] == cols-1) return true; //if pivot in final column
+            if (pivot[1] == cols - 1) return true; //if pivot in final column
         }
         return false;
     }
@@ -95,34 +97,40 @@ class RowReduction {
     public void printSolutions() {
         if (pivots.size() == cols - 1) { //pivot in every column (except augment) -> unique solution
             for (int[] pivot : pivots) {
-                System.out.printf("X%d = %f\n", pivot[1], matrix[pivot[0]][cols-1]);
+                System.out.printf("X%d = %f\n", pivot[1], matrix[pivot[0]][cols - 1]);
             }
-        } else {
-            Set<Integer> pivotCols = new HashSet<>();
-            for (int[] pivot : pivots) {
-                pivotCols.add(pivot[1]);
-            }
-            for (int row = 0; row < rows; row++) {
-                List<Integer> basicCols = new ArrayList<>();
-                List<Integer> freeCols = new ArrayList<>();
-                for (int col = 0; col < cols-1; col++) {
-                    if(pivotCols.contains(col)) {
-                        if (matrix[row][col] != 0) basicCols.add(col);
-                    } else {
-                        freeCols.add(col);
-                    }
-                }
+        } else printParameterizedSolSet();
+    }
 
-                StringBuffer out = new StringBuffer();
-                for (Integer col : basicCols) {
-                    out.append("X").append(col).append(" = ");
+    /**
+     * Prints the parameterized form of the solution set of a given system.
+     * Assumes the system indeed has infinite solutions.
+     */
+    private void printParameterizedSolSet() {
+        Set<Integer> pivotCols = new HashSet<>();
+        for (int[] pivot : pivots) {
+            pivotCols.add(pivot[1]);
+        }
+
+        for (int row = 0; row < rows; row++) {
+            StringBuffer out = new StringBuffer();
+            int basicCol = -1;
+            for (int col = 0; col < cols - 1; col++) {
+                if (pivotCols.contains(col) && matrix[row][col] != 0) basicCol = col;
+                else if (basicCol != -1) {
+                    out.append("X").append(basicCol).append(" = ");
+                    out.append(matrix[row][cols - 1]);
+
+                    double coeff = matrix[row][col];
+
+                    if (coeff > 0) out.append(" - ");
+                    else out.append(" + ");
+
+                    out.append(Math.abs(coeff)).append("X").append(col + 1);
+                    break;
                 }
-                out.append(matrix[row][cols-1]);
-                for (Integer col : freeCols) {
-                    out.append(" - ").append(matrix[row][col]).append("X").append(col+1);
-                }
-                System.out.println(out);
             }
+            System.out.println(out);
         }
     }
 
@@ -161,7 +169,7 @@ class RowReduction {
         int currRow = 0, currCol = 0; //row and col of current "search space" i.e. rows and columns not yet considered
         // Step 1
         int[] rowAndCol = scanForNonZero(currRow, currCol);
-        while(rowAndCol != null) {
+        while (rowAndCol != null) {
             currCol = rowAndCol[1];
 
             // Step 2
