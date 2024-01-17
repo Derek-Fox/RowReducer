@@ -7,27 +7,23 @@ public class Main {
         System.out.println("Welcome to the row reducer.");
 
 //        int[] rowColumn = getRowsAndColumns();
-//        RowReduction rr = new RowReduction(rowColumn[0], rowColumn[1]);
-//        rr.populateMatrix(in);
+//        double[][] matrix = createMatrix(rowColumn[0], rowColumn[1]);
+//        RowReducer rr = new RowReducer();
 
-        RowReduction rr = new RowReduction(2, 4);
-        rr.matrix = new double[][]{
+        RowReducer rr = new RowReducer(false);
+        double[][] matrix = new double[][]{
                 {1, 0, -8, -3},
                 {0, 1, -1, -1}
         };
-        rr.printMatrix();
 
-        System.out.println("Performing forward phase of algorithm...");
-        rr.forward();
-        if (rr.checkInconsistent()) {
-            System.out.println("System is inconsistent. No solutions.");
-        } else {
-            System.out.println("Performing backward phase of algorithm...");
-            rr.backward();
-            rr.printSolutions();
-        }
+        rr.reduce(matrix);
     }
 
+    /**
+     * Gets the number of rows and columns from stdin.
+     *
+     * @return array with {rows, cols}
+     */
     private static int[] getRowsAndColumns() {
         System.out.print("Enter the number of rows in the augmented matrix: ");
         int rows = in.nextInt();
@@ -36,25 +32,15 @@ public class Main {
         in.nextLine(); //consume newline (i hate java)
         return new int[]{rows, columns};
     }
-}
-
-class RowReduction {
-    private final int rows, cols;
-    private final List<int[]> pivots = new ArrayList<>();
-    double[][] matrix;
-
-    public RowReduction(int rows, int cols) {
-        this.rows = rows;
-        this.cols = cols;
-        this.matrix = new double[rows][cols];
-    }
 
     /**
      * Populates matrix from stdin.
      *
-     * @param in scanner to use
+     * @param rows number of rows
+     * @param cols number of cols
      */
-    public void populateMatrix(Scanner in) {
+    public static double[][] createMatrix(int rows, int cols) {
+        double[][] matrix = new double[rows][cols];
         for (int i = 0; i < rows; i++) {
             System.out.printf("Enter all values for row %d as a space separated list.\n", i + 1);
             String[] parts = in.nextLine().split(" ");
@@ -67,13 +53,56 @@ class RowReduction {
             double[] row = Arrays.stream(parts).mapToDouble(Double::parseDouble).toArray();
             matrix[i] = row;
         }
+        return matrix;
+    }
+}
+
+class RowReducer {
+    private int rows, cols;
+    private final List<int[]> pivots = new ArrayList<>();
+    private final boolean verbose;
+
+    public RowReducer(boolean verbose) {
+        this.verbose = verbose;
     }
 
-    public void printMatrix() {
+    /**
+     * Entry point to perform the row reduction algorithm.
+     * Determines if given augmented matrix represents a system that is consistent or inconsistent.
+     * Finds the echelon form of any matrix; if consistent, finds reduced echelon form.
+     * Prints the solution set of a consistent system; if there are infinite solutions, gives parameterized form
+     *
+     * @param matrix augmented matrix of real numbers to perform the row reduction algorithm on.
+     */
+    public void reduce(double[][] matrix) {
+        this.rows = matrix.length; //save n and m of given matrix
+        this.cols = matrix[0].length;
+
+        System.out.println("Original matrix:");
+        printMatrix(matrix);
+        System.out.println("Performing forward phase of algorithm...");
+
+        forward(matrix);
+        if (checkInconsistent(matrix)) {
+            System.out.println("System is inconsistent. No solutions.");
+        } else {
+            System.out.println("Performing backward phase of algorithm...");
+            backward(matrix);
+            printSolutions(matrix);
+        }
+    }
+
+    /**
+     * Pretty print the given matrix.
+     *
+     * @param matrix matrix to print
+     */
+    private void printMatrix(double[][] matrix) {
         for (double[] row : matrix) {
-            System.out.print("[  ");
-            for (double v : row) {
-                System.out.printf("%.4f  ", v);
+            System.out.print("[");
+            for (int col = 0; col < cols; col++) {
+                System.out.printf("%.4f", row[col]);
+                if(col < cols-1) System.out.print(", ");
             }
             System.out.println("]");
         }
@@ -84,9 +113,9 @@ class RowReduction {
      *
      * @return true if system is inconsistent
      */
-    public boolean checkInconsistent() {
+    private boolean checkInconsistent(double[][] matrix) {
         for (int[] pivot : pivots) {
-            if (pivot[1] == cols - 1) return true; //if pivot in final column
+            if (pivot[1] == matrix[0].length - 1) return true; //if pivot in final column
         }
         return false;
     }
@@ -94,34 +123,36 @@ class RowReduction {
     /**
      * Prints solutions of the system. To be called after backward(), and only on consistent systems.
      */
-    public void printSolutions() {
+    private void printSolutions(double[][] matrix) {
+        int cols = matrix[0].length;
         if (pivots.size() == cols - 1) { //pivot in every column (except augment) -> unique solution
             for (int[] pivot : pivots) {
                 System.out.printf("X%d = %f\n", pivot[1], matrix[pivot[0]][cols - 1]);
             }
-        } else printParameterizedSolSet();
+        } else printParameterizedSolSet(matrix);
     }
 
     /**
      * Prints the parameterized form of the solution set of a given system.
      * Assumes the system indeed has infinite solutions.
      */
-    private void printParameterizedSolSet() {
+    private void printParameterizedSolSet(double[][] matrix) {
         Set<Integer> pivotCols = new HashSet<>();
         for (int[] pivot : pivots) {
             pivotCols.add(pivot[1]);
         }
 
-        for (int row = 0; row < rows; row++) {
+        for (double[] row : matrix) {
             StringBuffer out = new StringBuffer();
             int basicCol = -1;
             for (int col = 0; col < cols - 1; col++) {
-                if (pivotCols.contains(col) && matrix[row][col] != 0) basicCol = col;
-                else if (basicCol != -1) {
+                if (pivotCols.contains(col)) {
+                    if (row[col] != 0) basicCol = col;
+                } else if (basicCol != -1) {
                     out.append("X").append(basicCol).append(" = ");
-                    out.append(matrix[row][cols - 1]);
+                    out.append(row[cols - 1]);
 
-                    double coeff = matrix[row][col];
+                    double coeff = row[col];
 
                     if (coeff > 0) out.append(" - ");
                     else out.append(" + ");
@@ -137,7 +168,7 @@ class RowReduction {
     /**
      * Performs backward phase of row reduction algorithm.
      */
-    public void backward() {
+    private void backward(double[][] matrix) {
         List<int[]> reversePivots = new ArrayList<>(pivots);
         Collections.reverse(reversePivots);
         for (int[] pivot : reversePivots) {
@@ -145,11 +176,13 @@ class RowReduction {
             for (int row = startRow - 1; row >= 0; row--) {
                 double valueAbove = matrix[row][col];
                 if (valueAbove != 0) {
-                    replace(row, startRow, -valueAbove);
+                    replace(matrix, row, startRow, -valueAbove);
                 }
             }
-            printMatrix();
-            System.out.println();
+            if (verbose) {
+                printMatrix(matrix);
+                System.out.println();
+            }
         }
     }
 
@@ -157,43 +190,33 @@ class RowReduction {
      * Performs the forward phase of the row reduction algorithm.
      * After completion, the matrix of this instance *should* be in echelon form.
      */
-    public void forward() {
-        /*
-        1) Scan rows left to right to find first non-zero value
-        2) Swap (if necessary) so this value is in topmost unconsidered row
-        3) Scale this value to 1
-        4) Use row replacement so all entries below this 1 are 0.
-        5) Repeat as necessary until out of columns
-         */
-
+    private void forward(double[][] matrix) {
         int currRow = 0, currCol = 0; //row and col of current "search space" i.e. rows and columns not yet considered
-        // Step 1
-        int[] rowAndCol = scanForNonZero(currRow, currCol);
+        int[] rowAndCol = scanForNonZero(matrix, currRow, currCol);
         while (rowAndCol != null) {
             currCol = rowAndCol[1];
 
-            // Step 2
             if (rowAndCol[0] != currRow) {
-                swap(currRow, rowAndCol[0]);
+                swap(matrix, currRow, rowAndCol[0]);
             }
 
-            // Step 3
             double scaleFac = 1 / matrix[currRow][currCol]; //value * scaleFac = 1 -> 1 / value = scaleFac
-            scale(currRow, scaleFac);
+            scale(matrix, currRow, scaleFac);
 
-            //Step 4
             for (int row = currRow + 1; row < rows; row++) {
                 double valueBelow = matrix[row][currCol];
                 if (valueBelow != 0) {
-                    replace(row, currRow, -valueBelow);
+                    replace(matrix, row, currRow, -valueBelow);
                 }
             }
 
             pivots.add(new int[]{currRow, currCol});
-            rowAndCol = scanForNonZero(++currRow, ++currCol);
+            rowAndCol = scanForNonZero(matrix, ++currRow, ++currCol);
 
-            printMatrix();
-            System.out.println();
+            if (verbose) {
+                printMatrix(matrix);
+                System.out.println();
+            }
         }
 
     }
@@ -206,7 +229,7 @@ class RowReduction {
      * @param startCol index of column to start search
      * @return array with {row, column} of found value
      */
-    private int[] scanForNonZero(int startRow, int startCol) {
+    private int[] scanForNonZero(double[][] matrix, int startRow, int startCol) {
         for (int col = startCol; col < cols; col++) {
             for (int row = startRow; row < rows; row++) {
                 if (matrix[row][col] != 0) return new int[]{row, col};
@@ -221,7 +244,7 @@ class RowReduction {
      * @param R1 index of first row
      * @param R2 index of second row
      */
-    private void swap(int R1, int R2) {
+    private void swap(double[][] matrix, int R1, int R2) {
         double[] temp = matrix[R2];
         matrix[R2] = matrix[R1];
         matrix[R1] = temp;
@@ -233,7 +256,7 @@ class RowReduction {
      * @param row    index of row
      * @param factor constant factor (real number)
      */
-    private void scale(int row, double factor) {
+    private void scale(double[][] matrix, int row, double factor) {
         for (int i = 0; i < cols; i++) {
             matrix[row][i] *= factor;
         }
@@ -247,7 +270,7 @@ class RowReduction {
      * @param R2     index of source row
      * @param factor real number factor to scale by (enter 1 for no scaling)
      */
-    private void replace(int R1, int R2, double factor) {
+    private void replace(double[][] matrix, int R1, int R2, double factor) {
         for (int i = 0; i < cols; i++) {
             matrix[R1][i] += matrix[R2][i] * factor;
         }
