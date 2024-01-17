@@ -6,15 +6,16 @@ public class Main {
     public static void main(String[] args) {
         System.out.println("Welcome to the row reducer.");
 
-//        int[] rowColumn = getRowsAndColumns();
-//        double[][] matrix = createMatrix(rowColumn[0], rowColumn[1]);
-//        RowReducer rr = new RowReducer();
+        int[] rowColumn = getRowsAndColumns();
+        double[][] matrix = createMatrix(rowColumn[0], rowColumn[1]);
+        boolean verbose = getVerbosity();
+        RowReducer rr = new RowReducer(verbose);
 
-        RowReducer rr = new RowReducer(false);
-        double[][] matrix = new double[][]{
-                {1, 0, -8, -3},
-                {0, 1, -1, -1}
-        };
+//        RowReducer rr = new RowReducer(false);
+//        double[][] matrix = new double[][]{
+//                {1, 0, -8, -3},
+//                {0, 1, -1, -1}
+//        };
 
         rr.reduce(matrix);
     }
@@ -39,7 +40,7 @@ public class Main {
      * @param rows number of rows
      * @param cols number of cols
      */
-    public static double[][] createMatrix(int rows, int cols) {
+    private static double[][] createMatrix(int rows, int cols) {
         double[][] matrix = new double[rows][cols];
         for (int i = 0; i < rows; i++) {
             System.out.printf("Enter all values for row %d as a space separated list.\n", i + 1);
@@ -54,6 +55,18 @@ public class Main {
             matrix[i] = row;
         }
         return matrix;
+    }
+
+    private static boolean getVerbosity() {
+        System.out.println("Would you like to see each step? (y/n)");
+        String choice = in.next();
+
+        while (choice.length() > 1) {
+            System.out.println("Invalid input, try again.");
+            choice = in.next();
+        }
+
+        return choice.equalsIgnoreCase("y");
     }
 }
 
@@ -80,7 +93,7 @@ class RowReducer {
 
         System.out.println("Original matrix:");
         printMatrix(matrix);
-        System.out.println("Performing forward phase of algorithm...");
+        System.out.println("\nPerforming forward phase of algorithm...");
 
         forward(matrix);
         if (checkInconsistent(matrix)) {
@@ -102,7 +115,7 @@ class RowReducer {
             System.out.print("[");
             for (int col = 0; col < cols; col++) {
                 System.out.printf("%.4f", row[col]);
-                if(col < cols-1) System.out.print(", ");
+                if (col < cols - 1) System.out.print(", ");
             }
             System.out.println("]");
         }
@@ -192,12 +205,13 @@ class RowReducer {
      */
     private void forward(double[][] matrix) {
         int currRow = 0, currCol = 0; //row and col of current "search space" i.e. rows and columns not yet considered
-        int[] rowAndCol = scanForNonZero(matrix, currRow, currCol);
-        while (rowAndCol != null) {
-            currCol = rowAndCol[1];
+        int[] nextRowAndCol = scanForNonZero(matrix, currRow, currCol);
+        while (nextRowAndCol != null) {
+            currCol = nextRowAndCol[1];
 
-            if (rowAndCol[0] != currRow) {
-                swap(matrix, currRow, rowAndCol[0]);
+            int nextRow = nextRowAndCol[0];
+            if (nextRow != currRow) {
+                swap(matrix, currRow, nextRow);
             }
 
             double scaleFac = 1 / matrix[currRow][currCol]; //value * scaleFac = 1 -> 1 / value = scaleFac
@@ -211,7 +225,7 @@ class RowReducer {
             }
 
             pivots.add(new int[]{currRow, currCol});
-            rowAndCol = scanForNonZero(matrix, ++currRow, ++currCol);
+            nextRowAndCol = scanForNonZero(matrix, ++currRow, ++currCol);
 
             if (verbose) {
                 printMatrix(matrix);
