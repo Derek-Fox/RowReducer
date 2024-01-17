@@ -97,10 +97,14 @@ class RowReducer {
 
         forward(matrix);
         if (checkInconsistent(matrix)) {
+            System.out.println("Here is the matrix in echelon form: ");
+            printMatrix(matrix);
             System.out.println("System is inconsistent. No solutions.");
         } else {
             System.out.println("Performing backward phase of algorithm...");
             backward(matrix);
+            System.out.println("Here is the matrix in reduced echelon form: ");
+            printMatrix(matrix);
             printSolutions(matrix);
         }
     }
@@ -137,7 +141,7 @@ class RowReducer {
      * Prints solutions of the system. To be called after backward(), and only on consistent systems.
      */
     private void printSolutions(double[][] matrix) {
-        int cols = matrix[0].length;
+
         if (pivots.size() == cols - 1) { //pivot in every column (except augment) -> unique solution
             for (int[] pivot : pivots) {
                 System.out.printf("X%d = %f\n", pivot[1], matrix[pivot[0]][cols - 1]);
